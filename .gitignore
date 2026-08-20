@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+ENV/
+.env
+resqmesh.db
+dev.db
+*.db
+.pytest_cache/
+.coverage
+htmlcov/
