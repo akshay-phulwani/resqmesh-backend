@@ -57,22 +57,22 @@ def seed_database(db: Session):
 
     if db.query(Hospital).count() == 0:
         hospitals = [
-            Hospital(name="Zuckerberg San Francisco General Hospital", latitude=37.7568, longitude=-122.4058, emergency_capacity=50, current_occupancy=42, specialties=["Trauma", "Cardiac"], availability=True),
-            Hospital(name="UCSF Helen Diller Medical Center", latitude=37.7631, longitude=-122.4578, emergency_capacity=35, current_occupancy=18, specialties=["Trauma", "Pediatric", "Burn"], availability=True),
-            Hospital(name="Kaiser Permanente San Francisco", latitude=37.7831, longitude=-122.4431, emergency_capacity=25, current_occupancy=20, specialties=["Cardiac", "Pediatric"], availability=True),
-            Hospital(name="CPMC Van Ness Campus", latitude=37.7865, longitude=-122.4225, emergency_capacity=30, current_occupancy=24, specialties=["Trauma", "Burn"], availability=True)
+            Hospital(name="SMS Hospital (Sawai Man Singh Hospital)", latitude=26.8982, longitude=75.8124, emergency_capacity=50, current_occupancy=42, specialties=["Trauma", "Cardiac"], availability=True),
+            Hospital(name="Fortis Escorts Hospital", latitude=26.8488, longitude=75.8015, emergency_capacity=35, current_occupancy=18, specialties=["Trauma", "Pediatric", "Burn"], availability=True),
+            Hospital(name="Eternal Hospital (EHCC)", latitude=26.8542, longitude=75.8066, emergency_capacity=25, current_occupancy=20, specialties=["Cardiac", "Pediatric"], availability=True),
+            Hospital(name="Santokba Durlabhji Hospital (SDMH)", latitude=26.8943, longitude=75.8037, emergency_capacity=30, current_occupancy=24, specialties=["Trauma", "Burn"], availability=True)
         ]
         db.add_all(hospitals)
         db.commit()
 
     if db.query(Resource).count() == 0:
         resources = [
-            Resource(name="Medic-01 (Union Square)", type="Ambulance", latitude=37.7892, longitude=-122.4012, status="Idle", availability=True),
-            Resource(name="Medic-02 (Castro)", type="Ambulance", latitude=37.7621, longitude=-122.4354, status="Idle", availability=True),
-            Resource(name="Medic-03 (Nob Hill)", type="Ambulance", latitude=37.7951, longitude=-122.4182, status="Idle", availability=True),
-            Resource(name="Medic-04 (Civic Center)", type="Ambulance", latitude=37.7749, longitude=-122.4194, status="Busy", availability=False),
-            Resource(name="Rescue-10 (SOMA)", type="FireTruck", latitude=37.7785, longitude=-122.4056, status="Idle", availability=True),
-            Resource(name="Patrol-22 (Chinatown)", type="PoliceCruiser", latitude=37.7943, longitude=-122.4072, status="Idle", availability=True)
+            Resource(name="Medic-01 (C-Scheme)", type="Ambulance", latitude=26.9094, longitude=75.8012, status="Idle", availability=True),
+            Resource(name="Medic-02 (Malviya Nagar)", type="Ambulance", latitude=26.8548, longitude=75.8214, status="Idle", availability=True),
+            Resource(name="Medic-03 (Vaishali Nagar)", type="Ambulance", latitude=26.9015, longitude=75.7382, status="Idle", availability=True),
+            Resource(name="Medic-04 (Raja Park)", type="Ambulance", latitude=26.8912, longitude=75.8294, status="Busy", availability=False),
+            Resource(name="Rescue-10 (Mansarovar)", type="FireTruck", latitude=26.8621, longitude=75.7562, status="Idle", availability=True),
+            Resource(name="Patrol-22 (Pink City)", type="PoliceCruiser", latitude=26.9214, longitude=75.8252, status="Idle", availability=True)
         ]
         db.add_all(resources)
         db.commit()
@@ -85,23 +85,26 @@ def startup_event():
     
     db = SessionLocal()
     try:
-        seed_database(db)
-        
         # Clear old database records for fresh simulation state
-        print("Clearing old simulation records (incidents, recommendations, events)...")
+        print("Clearing old simulation records (incidents, recommendations, events, resources, hospitals)...")
+        db.query(Hospital).delete()
+        db.query(Resource).delete()
         db.query(Recommendation).delete()
         db.query(EmergencyEvent).delete()
         db.query(Incident).delete()
+        db.commit()
+
+        seed_database(db)
         
         # Reset hospital occupancy to defaults
         for h in db.query(Hospital).all():
-            if "Zuckerberg" in h.name:
+            if "SMS" in h.name or "Sawai" in h.name:
                 h.current_occupancy = 42
-            elif "UCSF" in h.name:
+            elif "Fortis" in h.name:
                 h.current_occupancy = 18
-            elif "Kaiser" in h.name:
+            elif "EHCC" in h.name or "Eternal" in h.name:
                 h.current_occupancy = 20
-            elif "CPMC" in h.name:
+            elif "SDMH" in h.name or "Santokba" in h.name:
                 h.current_occupancy = 24
                 
         # Reset resource status to defaults

@@ -88,66 +88,66 @@ async def run_local_tests():
     
     assert ai_result.incident_type in ["Car Collision", "Structure Fire", "General Medical"], "AI Incident Type extraction error"
     assert ai_result.severity in ["High", "Critical", "Medium"], "AI Severity assessment error"
-    print("✓ Incident Intelligence verified successfully.")
+    print("[OK] Incident Intelligence verified successfully.")
 
     # 2. Test RAG Retrieval Logic
     print("\n--- 2. Testing RAG Guideline Search ---")
-    fit_vectorizer_on_guidelines("data/emergency_guidance.txt")
+    fit_vectorizer_on_guidelines("../data/emergency_guidance.txt")
     # Query guidelines locally (using our optimized sklearn fallback when pgvector is not initialized)
     guidance = query_rag(None, emergency_text)
     print(f"Retrieved Procedure:\n{guidance}")
     assert "Motor Vehicle Accident" in guidance or "Bleeding" in guidance or "Fire" in guidance, "RAG Search failed to find relevant documentation"
-    print("✓ pgvector RAG fallback semantic retrieval verified successfully.")
+    print("[OK] pgvector RAG fallback semantic retrieval verified successfully.")
 
     # 3. Test Routing and TrustScore Engine
     print("\n--- 3. Testing Routing & TrustScore Calculation ---")
     
-    # Setup mock incident location (Civic Center SF)
+    # Setup mock incident location (Jaipur Center)
     # Mock Incident
     class MockIncident:
-        latitude = 37.7794
-        longitude = -122.4194
+        latitude = 26.9124
+        longitude = 75.7873
         incident_type = "Car Collision"
         severity = "High"
         description = emergency_text
 
-    # Mock Resource (Ambulance 1: Union Square - 1.5 km away)
+    # Mock Resource (Ambulance 1: C-Scheme)
     class MockAmbulance1:
         id = 1
-        name = "Medic-01 (Union Square)"
+        name = "Medic-01 (C-Scheme)"
         type = "Ambulance"
-        latitude = 37.7892
-        longitude = -122.4012
+        latitude = 26.9094
+        longitude = 75.8012
         status = "Idle"
         availability = True
 
-    # Mock Resource (Ambulance 2: Nob Hill - 2.8 km away)
+    # Mock Resource (Ambulance 2: Vaishali Nagar)
     class MockAmbulance2:
         id = 2
-        name = "Medic-02 (Nob Hill)"
+        name = "Medic-03 (Vaishali Nagar)"
         type = "Ambulance"
-        latitude = 37.7951
-        longitude = -122.4182
+        latitude = 26.9015
+        longitude = 75.7382
         status = "Idle"
         availability = True
 
-    # Mock Hospital (ZSFG - Trauma Specialty, 2.5 km away, capacity available)
+    # Mock Hospital (SMS Hospital - Trauma Specialty, capacity available)
     class MockHospital1:
         id = 1
-        name = "Zuckerberg SF General Hospital"
-        latitude = 37.7568
-        longitude = -122.4058
+        name = "SMS Hospital (Sawai Man Singh Hospital)"
+        latitude = 26.8982
+        longitude = 75.8124
         emergency_capacity = 50
         current_occupancy = 30
         specialties = ["Trauma", "Cardiac"]
         availability = True
 
-    # Mock Hospital 2 (Kaiser SF - No Trauma specialty, 3.2 km away)
+    # Mock Hospital 2 (EHCC - No Trauma specialty)
     class MockHospital2:
         id = 2
-        name = "Kaiser Permanente SF"
-        latitude = 37.7831
-        longitude = -122.4431
+        name = "Eternal Hospital (EHCC)"
+        latitude = 26.8542
+        longitude = 75.8066
         emergency_capacity = 25
         current_occupancy = 24 # Almost Full
         specialties = ["Cardiac", "Pediatric"]
@@ -171,15 +171,15 @@ async def run_local_tests():
     print(f"  TrustScore: {score_option2['trust_score']} / 100")
     print(f"  Details: {score_option2['explanation']}")
 
-    assert score_option1["trust_score"] > score_option2["trust_score"], "TrustScore failed to rank ZSFG trauma center and closer ambulance first!"
-    print("✓ TrustScore ranking matches operational guidelines.")
+    assert score_option1["trust_score"] > score_option2["trust_score"], "TrustScore failed to rank SMS Hospital trauma center and closer ambulance first!"
+    print("[OK] TrustScore ranking matches operational guidelines.")
 
     # 4. Test Dynamic Re-planning on road blockages
     print("\n--- 4. Testing Dynamic Re-planning Engine ---")
     print("Simulating a major road block on Market St crossing downtown Union Square streets (placing blockage near Union Square)...")
     
-    # Place a blockage near Union Square (lat 37.788, lon -122.408) which blocks Medic-01's route to the incident
-    add_blockage("BLOCK_UNION_SQ", 37.788, -122.408, "Major Water Main Break on Stockton St", radius_m=200.0)
+    # Place a blockage near Tonk Road (lat 26.9094, lon 75.7990) which blocks Medic-01's route to the incident
+    add_blockage("BLOCK_UNION_SQ", 26.9094, 75.7990, "Major Water Main Break near Tonk Road", radius_m=200.0)
     
     # Recalculate route and TrustScores with blockage active
     score_option1_blocked = await calculate_trust_score(inc, amb1, hosp1)
@@ -195,7 +195,7 @@ async def run_local_tests():
 
     assert score_option1_blocked["trust_score"] == 0.0, "Dynamic re-planning failed to set blocked route score to 0!"
     assert score_option2_blocked["trust_score"] > 0.0, "Unblocked alternate route score error!"
-    print("✓ Dynamic Re-planning recalculated successfully (Option 2 is now the primary recommendation).")
+    print("[OK] Dynamic Re-planning recalculated successfully (Option 2 is now the primary recommendation).")
 
     # Clear blockage
     remove_blockage("BLOCK_UNION_SQ")

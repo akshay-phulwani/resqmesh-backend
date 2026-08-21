@@ -8,12 +8,13 @@ from .models import GuidanceEmbedding
 # Global TF-IDF Vectorizer fitted on startup
 vectorizer = TfidfVectorizer(max_features=384)
 is_fitted = False
+global_docs = []
 
 def fit_vectorizer_on_guidelines(filepath: str):
     """
     Reads the text guidelines corpus and fits the TF-IDF vectorizer.
     """
-    global vectorizer, is_fitted
+    global vectorizer, is_fitted, global_docs
     if not os.path.exists(filepath):
         print(f"Guidelines file not found at {filepath}")
         return []
@@ -45,6 +46,7 @@ def fit_vectorizer_on_guidelines(filepath: str):
     if corpus:
         vectorizer.fit(corpus)
         is_fitted = True
+        global_docs = documents
         print(f"TF-IDF Vectorizer successfully fitted on {len(corpus)} documents.")
         
     return documents
@@ -92,14 +94,14 @@ def query_rag(db: Session, query: str) -> str:
     """
     Vector search query calculating cosine similarity in Python (SQLite compatible)
     """
-    global vectorizer, is_fitted
+    global vectorizer, is_fitted, global_docs
     
     # Fit vectorizer if not already fitted
     if not is_fitted:
         guidelines_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "emergency_guidance.txt"))
         fit_vectorizer_on_guidelines(guidelines_path)
         
-    if not is_fitted or not db:
+    if not is_fitted:
         return "Guidance: Remain calm. Help is on the way."
         
     # Transform query to vector
@@ -108,9 +110,33 @@ def query_rag(db: Session, query: str) -> str:
         query_vec = np.pad(query_vec, (0, 384 - len(query_vec)), 'constant')
         
     try:
-        # Load all guidance embeddings from SQLite
-        all_embeddings = db.query(GuidanceEmbedding).all()
-        if not all_embeddings:
+        # Load all guidance from db or fallback to in-memory global_docs
+        doc_list = []
+        if db is not None:
+            all_embeddings = db.query(GuidanceEmbedding).all()
+            for emb in all_embeddings:
+                if emb.embedding:
+                    emb_vec = np.array(emb.embedding)
+                    if len(emb_vec) < 384:
+                        emb_vec = np.pad(emb_vec, (0, 384 - len(emb_vec)), 'constant')
+                    doc_list.append({
+                        "title": emb.title,
+                        "content": emb.content,
+                        "embedding": emb_vec
+                    })
+        else:
+            # Fallback to local global_docs embeddings calculated on the fly
+            for doc in global_docs:
+                doc_vec = vectorizer.transform([doc["content"]]).toarray()[0]
+                if len(doc_vec) < 384:
+                    doc_vec = np.pad(doc_vec, (0, 384 - len(doc_vec)), 'constant')
+                doc_list.append({
+                    "title": doc["title"],
+                    "content": doc["content"],
+                    "embedding": doc_vec
+                })
+
+        if not doc_list:
             return "Guidance: Remain calm. Help is on the way."
             
         best_doc = None
@@ -122,15 +148,8 @@ def query_rag(db: Session, query: str) -> str:
         if norm_q == 0:
             norm_q = 1e-9
             
-        for emb in all_embeddings:
-            if not emb.embedding:
-                continue
-            
-            # Since embedding is a JSON column, SQLAlchemy loads it directly as a list
-            emb_vec = np.array(emb.embedding)
-            if len(emb_vec) < 384:
-                emb_vec = np.pad(emb_vec, (0, 384 - len(emb_vec)), 'constant')
-                
+        for emb in doc_list:
+            emb_vec = emb["embedding"]
             norm_e = np.linalg.norm(emb_vec)
             if norm_e == 0:
                 norm_e = 1e-9
@@ -143,7 +162,7 @@ def query_rag(db: Session, query: str) -> str:
                 best_doc = emb
                 
         if best_doc:
-            return f"Official First Aid Instructions ({best_doc.title}):\n{best_doc.content}"
+            return f"Official First Aid Instructions ({best_doc['title']}):\n{best_doc['content']}"
     except Exception as e:
         print(f"RAG query execution failed: {e}")
         

@@ -12,9 +12,9 @@ async def test_e2e_flow():
         # 1. Citizen reports emergency
         print("\nStep 1: Simulating citizen submitting a collision report...")
         report_data = {
-            "description": "Car collision on Market St near Union Square! 3 victims are injured and bleeding. Engine is smoking.",
-            "latitude": 37.7882,
-            "longitude": -122.4075,
+            "description": "Car collision on MI Road near C-Scheme! 3 victims are injured and bleeding. Engine is smoking.",
+            "latitude": 26.9124,
+            "longitude": 75.7873,
             "user_id": 3
         }
         
@@ -69,9 +69,9 @@ async def test_e2e_flow():
         # Create a road block right at Union Square (lat 37.788, lon -122.408)
         blockage_data = {
             "id": "LIVE_BLOCK_UNION_SQ",
-            "latitude": 37.788,
-            "longitude": -122.408,
-            "description": "Stockton St active gas leak repairs",
+            "latitude": 26.9094,
+            "longitude": 75.7990,
+            "description": "Tonk Road active gas leak repairs",
             "radius_meters": 200.0
         }
         
