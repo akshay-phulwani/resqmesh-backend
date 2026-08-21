@@ -22,8 +22,8 @@ app = FastAPI(title="ResQMesh Emergency Response Backend")
 # Enable CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, lock this down
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
